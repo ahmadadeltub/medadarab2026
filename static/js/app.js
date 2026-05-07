@@ -74,37 +74,57 @@ function drawGuides() {
   const base = Math.floor(H * 0.68);
   const mid = Math.floor(H * 0.50);
   const top = Math.floor(H * 0.32);
-  const gridBg = gridToggle && gridToggle.checked
-    ? `repeating-linear-gradient(to right, rgba(2,6,23,.04) 0 1px, transparent 1px 28px),
-       repeating-linear-gradient(to bottom, rgba(2,6,23,.03) 0 1px, transparent 1px 28px)` : 'none';
-  const linesBg = linesToggle && linesToggle.checked
-    ? `linear-gradient(to bottom,
-        transparent 0 ${top}px,
-        rgba(16,185,129,.18) ${top}px ${top + 2}px,
-        transparent ${top + 2}px ${mid}px,
-        rgba(16,185,129,.12) ${mid}px ${mid + 2}px,
-        transparent ${mid + 2}px ${base}px,
-        rgba(16,185,129,.22) ${base}px ${base + 2}px,
-        transparent ${base + 2}px 100%)` : 'none';
-  guides.style.backgroundImage = `${linesBg}, ${gridBg}`;
+
+  let bgParts = [];
+
+  if (linesToggle && linesToggle.checked) {
+    bgParts.push(
+      `linear-gradient(to bottom,
+        transparent 0px,
+        transparent ${top - 1}px,
+        rgba(16,185,129,0.4) ${top - 1}px,
+        rgba(16,185,129,0.4) ${top + 1}px,
+        transparent ${top + 1}px,
+        transparent ${mid - 1}px,
+        rgba(16,185,129,0.3) ${mid - 1}px,
+        rgba(16,185,129,0.3) ${mid + 1}px,
+        transparent ${mid + 1}px,
+        transparent ${base - 1}px,
+        rgba(16,185,129,0.6) ${base - 1}px,
+        rgba(16,185,129,0.6) ${base + 2}px,
+        transparent ${base + 2}px
+      )`
+    );
+  }
+
+  if (gridToggle && gridToggle.checked) {
+    bgParts.push(
+      `repeating-linear-gradient(to right, rgba(100,116,139,0.12) 0px 1px, transparent 1px 32px)`,
+      `repeating-linear-gradient(to bottom, rgba(100,116,139,0.08) 0px 1px, transparent 1px 32px)`
+    );
+  }
+
+  guides.style.backgroundImage = bgParts.length ? bgParts.join(', ') : 'none';
 }
 
-// === Clear ===
+// === Clear Canvas (transparent so ghost+guides show through) ===
 function clearCanvas() {
   if (!ctx) return;
-  ctx.save();
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#fffef7';
-  ctx.fillRect(0, 0, pad.width, pad.height);
-  ctx.restore();
+  ctx.clearRect(0, 0, pad.width, pad.height);
 }
 
-// === Ghost Text – auto-update when dropdown changes ===
+// === Ghost Text – updates immediately and stays permanently ===
 function updateGhost(text) {
   if (!ghost) return;
   ghost.textContent = text;
+  // Ensure opacity stays visible
+  const currentOpacity = parseFloat(ghost.style.opacity) || 0.18;
+  if (currentOpacity < 0.05) ghost.style.opacity = '0.18';
 }
-refLetter?.addEventListener('change', () => updateGhost(refLetter.value));
+
+refLetter?.addEventListener('change', () => {
+  if (refLetter.value) updateGhost(refLetter.value);
+});
 
 // Opacity slider
 ghostOpacity?.addEventListener('input', () => {
@@ -113,15 +133,14 @@ ghostOpacity?.addEventListener('input', () => {
   ghost.style.opacity = val.toString();
 });
 
-// Custom text apply
+// Custom text apply – text stays permanently
 const customRefText = document.getElementById('customRefText');
 const applyRefBtn = document.getElementById('applyRefBtn');
 applyRefBtn?.addEventListener('click', () => {
   const txt = customRefText?.value.trim();
   if (txt) {
     updateGhost(txt);
-    // clear dropdown selection so it doesn't override
-    if (refLetter) refLetter.selectedIndex = -1;
+    // Do NOT reset selectedIndex as it may trigger events
   }
 });
 customRefText?.addEventListener('keydown', e => {
